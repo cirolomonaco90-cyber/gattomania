@@ -35,7 +35,10 @@
       consent: 'Gestisci consenso pubblicità', copied: 'Copiato! Incollalo dove vuoi', restartQ: 'Ricominciare questo livello?',
       yes: 'Sì', no: 'No', fakeAd: 'Pubblicità di prova', hintDone: 'Mostrillo sbagliato tolto!',
       shareDaily: 'Mostrilli 🔥 Mostro del giorno #{n}', shareLevel: 'Mostrilli – Livello {n}',
-      shareLine: '⏱ {t}  {s}', shareCta: 'Riesci a fare meglio? 👇', collected: 'Mostrilli trovati'
+      shareLine: '⏱ {t}  {s}', shareCta: 'Riesci a fare meglio? 👇', collected: 'Mostrilli trovati',
+      removeAds: 'Rimuovi pubblicità', removeAdsHints: 'Rimuovi pubblicità · aiuti gratis', adsGone: 'Pubblicità rimossa. Grazie! 💜',
+      restore: 'Ripristina acquisti', restoring: 'Controllo gli acquisti… se ne hai fatti, tornano attivi tra poco.',
+      payPending: 'Pagamento in attesa di conferma', payFail: 'Acquisto non riuscito, riprova', adFree: 'Senza pubblicità ✓'
     },
     en: {
       tagline: 'The cute monster puzzle', play: 'Play', level: 'Level {n}',
@@ -54,7 +57,10 @@
       consent: 'Manage ad consent', copied: 'Copied! Paste it anywhere', restartQ: 'Restart this level?',
       yes: 'Yes', no: 'No', fakeAd: 'Test ad', hintDone: 'Wrong monster removed!',
       shareDaily: 'Mostrilli 🔥 Daily Monster #{n}', shareLevel: 'Mostrilli – Level {n}',
-      shareLine: '⏱ {t}  {s}', shareCta: 'Can you beat it? 👇', collected: 'Monsters found'
+      shareLine: '⏱ {t}  {s}', shareCta: 'Can you beat it? 👇', collected: 'Monsters found',
+      removeAds: 'Remove ads', removeAdsHints: 'Remove ads · free hints', adsGone: 'Ads removed. Thank you! 💜',
+      restore: 'Restore purchases', restoring: 'Checking purchases… if you bought before, it will be active shortly.',
+      payPending: 'Payment pending confirmation', payFail: 'Purchase failed, please try again', adFree: 'Ad-free ✓'
     }
   };
 
@@ -82,6 +88,30 @@
   function today() { return E.dayNumber(new Date()); }
   function currentStreak() { return S.lastDaily >= today() - 1 ? S.streak : 0; }
   function totalStars() { var n = 0; for (var k in S.stars) n += S.stars[k]; return n; }
+
+  /* --------------------------------------------------- acquisto "Rimuovi pubblicita'" */
+  var removePrice = ''; // prezzo localizzato fornito da Google Play (vuoto se non disponibile)
+  try {
+    if (Native && Native.adsRemoved) S.noAds = !!Native.adsRemoved();
+    if (Native && Native.removeAdsPrice) removePrice = Native.removeAdsPrice() || '';
+  } catch (e) { /* ponte non disponibile */ }
+  function shopAvailable() { return !S.noAds && (!!removePrice || !Native); } // nel browser (anteprima) si simula
+  function buyRemoveAds() {
+    if (Native && Native.buyRemoveAds) { try { Native.buyRemoveAds(); } catch (e) { toast(t('payFail')); } return; }
+    var d = document.createElement('div'); d.className = 'fakead'; d.textContent = t('fakeAd') + ' (acquisto) …';
+    document.body.appendChild(d);
+    setTimeout(function () { d.remove(); window.onAdsRemoved(true); }, 1200);
+  }
+  window.onAdsRemoved = function (v) {
+    S.noAds = !!v; save();
+    if (v) { toast(t('adsGone')); SFX.win(); }
+    if ($('#home').classList.contains('active')) renderHome();
+  };
+  window.onRemoveAdsPrice = function (p) {
+    removePrice = p || '';
+    if ($('#home').classList.contains('active') && !modals.length) renderHome();
+  };
+  window.onBillingMessage = function (code) { toast(code === 'pending' ? t('payPending') : t('payFail')); };
 
   /* ----------------------------------------------------------------- suoni */
   var AC = null;
@@ -199,10 +229,12 @@
       '<button class="btn green" id="bPlay"><span>▶ ' + t('play') + '<span class="sub">' + t('level', { n: S.level }) + '</span></span></button>' +
       '<button class="btn orange" id="bDaily"><span>📅 ' + t('daily') + '<span class="sub">' + (done ? t('dailyDone', { t: fmt(done.time) }) : t('dailyN', { n: day - DAILY_EPOCH + 1 })) + '</span></span>' +
       (done ? '' : '<span class="badge">' + t('dailyNew') + '</span>') + '</button>' +
+      (shopAvailable() ? '<button class="btn pink small center" id="bNoAds">🚫 ' + t('removeAds') + (removePrice ? ' · ' + removePrice : '') + '</button>' : '') +
       '</div><div class="bottomrow"><button class="btn white small" id="bHow">❓ ' + t('how') + '</button></div>';
     $('#bPlay').onclick = function () { SFX.tap(); startGame('level', S.level); };
     $('#bDaily').onclick = function () { SFX.tap(); startGame('daily', today()); };
     $('#bHow').onclick = function () { SFX.tap(); showTutorial(); };
+    var bn = $('#bNoAds'); if (bn) bn.onclick = function () { SFX.tap(); buyRemoveAds(); };
     $('#bSettings').onclick = function () { SFX.tap(); showSettings(); };
   }
 
@@ -378,9 +410,15 @@
   }
 
   function offerRewarded() {
+    if (S.noAds) { // chi ha rimosso la pubblicita' riceve gli aiuti subito, senza video
+      S.hints += 3; save(); var hc0 = $('#hcount'); if (hc0) hc0.textContent = S.hints; toast(t('gotHints')); SFX.hint(); return;
+    }
     var m = openModal('<h3>' + t('noHints') + '</h3><p>' + t('noHintsTxt') + '</p><div class="row">' +
-      '<button class="btn orange" id="mWatch">' + t('watch') + '</button><button class="btn white small" id="mNo">' + t('nothanks') + '</button></div>');
+      '<button class="btn orange" id="mWatch">' + t('watch') + '</button>' +
+      (shopAvailable() ? '<button class="btn pink small" id="mBuy">🚫 ' + t('removeAdsHints') + (removePrice ? ' · ' + removePrice : '') + '</button>' : '') +
+      '<button class="btn white small" id="mNo">' + t('nothanks') + '</button></div>');
     $('#mNo', m).onclick = function () { closeModal(m); };
+    var mb = $('#mBuy', m); if (mb) mb.onclick = function () { closeModal(m); buyRemoveAds(); };
     $('#mWatch', m).onclick = function () {
       closeModal(m);
       Ads.rewarded(function (ok, reason) {
@@ -506,12 +544,13 @@
   function showSettings() {
     function row(id, label, on) { return '<div class="toggle ' + (on ? 'on' : '') + '" id="' + id + '"><span>' + label + '</span><span class="sw"></span></div>'; }
     var m = openModal('<h3>' + t('settings') + '</h3>' + row('tSound', '🔊 ' + t('sound'), S.sound) + row('tHap', '📳 ' + t('haptics'), S.haptics) +
-      '<a class="link" id="lPriv">' + t('privacy') + '</a>' + (privacyOptionsNeeded() ? '<a class="link" id="lCons">' + t('consent') + '</a>' : '') +
+      '<a class="link" id="lPriv">' + t('privacy') + '</a>' + (Native && Native.restorePurchases ? '<a class="link" id="lRestore">' + t('restore') + '</a>' : '') + (privacyOptionsNeeded() ? '<a class="link" id="lCons">' + t('consent') + '</a>' : '') +
       '<a class="link" id="lLang">' + (lang === 'it' ? 'English' : 'Italiano') + '</a>' +
       '<div class="row"><button class="btn white small" id="mClose">' + t('close') + '</button></div><p style="font-size:13px;margin:10px 0 0;color:#9a8dbb">v' + VERSION + '</p>');
     $('#tSound', m).onclick = function () { S.sound = !S.sound; save(); this.classList.toggle('on', S.sound); if (S.sound) SFX.tap(); };
     $('#tHap', m).onclick = function () { S.haptics = !S.haptics; save(); this.classList.toggle('on', S.haptics); buzz(20); };
     $('#lPriv', m).onclick = function () { if (Native && Native.openUrl) Native.openUrl(PRIVACY_URL); else window.open(PRIVACY_URL, '_blank'); };
+    var lr = $('#lRestore', m); if (lr) lr.onclick = function () { try { Native.restorePurchases(); } catch (e) { /* ignora */ } toast(t('restoring')); };
     var lc = $('#lCons', m); if (lc) lc.onclick = function () { Native.showPrivacyOptions(); };
     $('#lLang', m).onclick = function () { S.lang = lang === 'it' ? 'en' : 'it'; save(); lang = S.lang; closeModal(m); if (G && $('#game').classList.contains('active')) startGame(G.mode, G.id); else renderHome(); };
     $('#mClose', m).onclick = function () { closeModal(m); };

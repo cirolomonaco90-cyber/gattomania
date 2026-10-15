@@ -1,11 +1,12 @@
 # Mostrilli – guida completa
 
-Gioco di logica per Android: un mostriciattolo per riga, colonna e zona colorata, senza che si tocchino. Nove creature originali, 300 livelli (la griglia cresce da 5×5 a 9×9 nei primi 20), "Mostro del giorno" uguale per tutti, condivisione stile Wordle, pubblicità AdMob (banner, schermo intero a intervalli, video con premio per gli aiuti) e consenso GDPR.
+Gioco di logica per Android: un mostriciattolo per riga, colonna e zona colorata, senza che si tocchino. Nove creature originali, 300 livelli (la griglia cresce da 5×5 a 9×9 nei primi 20), "Mostro del giorno" uguale per tutti, condivisione stile Wordle, pubblicità AdMob (banner, schermo intero a intervalli, video con premio per gli aiuti), acquisto una tantum "Rimuovi pubblicità" e consenso GDPR.
 
 ## Cosa è stato verificato e cosa no
 
 - **Verificato**: tutti i 300 livelli e tutti gli 800 "mostri del giorno" pre-generati hanno una sola soluzione (controllo automatico con `tools/verify-puzzles.js`, che gira anche a ogni build su GitHub); il generatore è deterministico, quindi lo stesso giorno dà lo stesso puzzle su ogni telefono. Inoltre l'intero gioco è stato provato in un browser Chromium che simula un telefono: tocchi, errori, aiuti, vittoria, condivisione, mostro del giorno, video di prova.
 - **Compilato su GitHub**: la parte Android (Kotlin, AdMob, consenso GDPR) compila correttamente, sia in versione di prova (APK) sia in versione di produzione minificata (AAB, senza firma).
+- **Acquisto "Rimuovi pubblicità"**: la logica dell'interfaccia è provata in simulazione nel browser; la parte Android (Billing) può essere verificata davvero solo con l'app installata da Google Play (vedi Passo 6).
 - **Non ancora provato su un telefono vero**: nessuno ha ancora aperto l'APK su un dispositivo. Installalo e dimmi se vedi qualcosa che non va (annunci di test, vibrazione, condivisione, tasto indietro): è il primo collaudo da fare.
 
 ## Passo 1 – Compilare su GitHub (nessuna installazione sul tuo PC)
@@ -49,6 +50,17 @@ Gioco di logica per Android: un mostriciattolo per riga, colonna e zona colorata
 4. L'app punta ad Android 16 (API 36), come richiesto da Google per i nuovi caricamenti dal 31 agosto 2026.
 5. Accetta *Play App Signing* quando richiesto.
 
+## Passo 6 – Acquisto "Rimuovi pubblicità"
+
+L'app contiene già il pulsante e il codice (Google Play Billing). Manca solo creare il prodotto nella Play Console:
+
+1. Play Console → la tua app → **Monetizza con Play → Prodotti → Prodotti una tantum → Crea prodotto**.
+2. **ID prodotto: `remove_ads`** (esattamente così, minuscolo: è scritto nel codice). Nome per esempio "Rimuovi pubblicità", descrizione "Elimina per sempre tutti gli annunci e rendi gratuiti gli aiuti".
+3. Imposta il **prezzo** (per esempio 2,99 €) e **attiva** il prodotto. Di solito serve prima aver caricato almeno un pacchetto (anche in test interno) e aver impostato un profilo di pagamento.
+4. Per provare senza pagare: Impostazioni → **Test delle licenze** → aggiungi il tuo indirizzo Gmail come tester di licenza. I suoi acquisti sono finti e gratuiti.
+5. **Si prova solo con l'app installata da Google Play** (test interno o chiuso, dal link per i tester). Con l'APK di prova scaricato da GitHub la fatturazione non è disponibile e il pulsante di acquisto non compare: è normale.
+6. Dopo l'acquisto spariscono banner, schermi interi e video; gli aiuti diventano gratis. "Ripristina acquisti" è nelle Impostazioni dell'app (utile se cambi telefono). Se Google rimborsa l'acquisto, gli annunci tornano alla prossima apertura.
+
 ## Aggiornamenti futuri
 
 Ogni build incrementa da sola il `versionCode` (numero del run). Per cambiare il gioco modifica i file in `app/src/main/assets/` (HTML/CSS/JS), fai commit e scarica il nuovo `.aab`.
@@ -66,4 +78,4 @@ Ogni build incrementa da sola il `versionCode` (numero del run). Per cambiare il
 
 ## Non ancora incluso
 
-Acquisto "Rimuovi pubblicità" (Google Play Billing), classifiche, notifiche giornaliere e salvataggio su cloud. Il progetto è pronto per aggiungerli.
+Classifiche, notifiche giornaliere e salvataggio su cloud. Il progetto è pronto per aggiungerli.

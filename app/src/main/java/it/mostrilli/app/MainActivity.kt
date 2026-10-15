@@ -40,6 +40,7 @@ import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import com.google.android.ump.ConsentInformation
 import com.google.android.ump.ConsentRequestParameters
 import com.google.android.ump.UserMessagingPlatform
+import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -58,6 +59,7 @@ class MainActivity : ComponentActivity() {
     private val adsStarted = AtomicBoolean(false)
     private val main = Handler(Looper.getMainLooper())
     private lateinit var consentInfo: ConsentInformation
+    private lateinit var billing: BillingManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
@@ -66,6 +68,15 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
         consentInfo = UserMessagingPlatform.getConsentInformation(this)
+        billing = BillingManager(
+            this,
+            onAdsRemovedChanged = { removed ->
+                runOnUiThread { applyAdsState() }
+                callJs("window.onAdsRemoved($removed)")
+            },
+            onPrice = { price -> callJs("window.onRemoveAdsPrice(${JSONObject.quote(price)})") },
+            onMessage = { code -> callJs("window.onBillingMessage('$code')") }
+        )
         buildUi()
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -75,6 +86,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
         })
+        billing.start()
         setupConsentAndAds()
     }
 
@@ -152,6 +164,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startAds() {
+        if (billing.adsRemoved) return // chi ha comprato "Rimuovi pubblicita'" non vede ne' carica annunci
         if (!adsStarted.compareAndSet(false, true)) return
         MobileAds.setRequestConfiguration(
             RequestConfiguration.Builder()
@@ -167,6 +180,24 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }.start()
+    }
+
+    /** Chiamata quando l'acquisto "Rimuovi pubblicita'" cambia (acquistato, ripristinato o rimborsato). */
+    private fun applyAdsState() {
+        if (billing.adsRemoved) {
+            main.removeCallbacksAndMessages(null)
+            bannerHolder.removeAllViews()
+            banner?.destroy()
+            banner = null
+            interstitial = null
+            rewarded = null
+        } else if (consentInfo.canRequestAds()) {
+            if (adsStarted.get()) {
+                loadBanner(); loadInterstitial(); loadRewarded()
+            } else {
+                startAds()
+            }
+        }
     }
 
     private fun loadBanner() {
@@ -186,10 +217,10 @@ class MainActivity : ComponentActivity() {
         InterstitialAd.load(
             this, BuildConfig.ADMOB_INTERSTITIAL_ID, AdRequest.Builder().build(),
             object : InterstitialAdLoadCallback() {
-                override fun onAdLoaded(ad: InterstitialAd) { interstitial = ad }
+                override fun onAdLoaded(ad: InterstitialAd) { interstitial = if (billing.adsRemoved) null else ad }
                 override fun onAdFailedToLoad(error: LoadAdError) {
                     interstitial = null
-                    main.postDelayed({ loadInterstitial() }, RETRY_MS)
+                    main.postDelayed({ if (!billing.adsRemoved) loadInterstitial() }, RETRY_MS)
                 }
             }
         )
@@ -199,16 +230,17 @@ class MainActivity : ComponentActivity() {
         RewardedAd.load(
             this, BuildConfig.ADMOB_REWARDED_ID, AdRequest.Builder().build(),
             object : RewardedAdLoadCallback() {
-                override fun onAdLoaded(ad: RewardedAd) { rewarded = ad }
+                override fun onAdLoaded(ad: RewardedAd) { rewarded = if (billing.adsRemoved) null else ad }
                 override fun onAdFailedToLoad(error: LoadAdError) {
                     rewarded = null
-                    main.postDelayed({ loadRewarded() }, RETRY_MS)
+                    main.postDelayed({ if (!billing.adsRemoved) loadRewarded() }, RETRY_MS)
                 }
             }
         )
     }
 
     private fun showInterstitialNow() {
+        if (billing.adsRemoved) return
         val ad = interstitial ?: return
         val now = System.currentTimeMillis()
         if (now - lastInterstitialAt < MIN_INTERSTITIAL_GAP_MS) return // mai annunci troppo ravvicinati
@@ -221,6 +253,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showRewardedNow() {
+        if (billing.adsRemoved) { // chi ha comprato non deve guardare video: la ricompensa e' immediata
+            callJs("window.onRewardedResult(true)")
+            return
+        }
         val ad = rewarded
         if (ad == null) {
             callJs("window.onRewardedResult(false, 'notready')")
@@ -284,6 +320,19 @@ class MainActivity : ComponentActivity() {
         @JavascriptInterface
         fun showRewarded() { runOnUiThread { showRewardedNow() } }
 
+        @JavascriptInterface
+        fun adsRemoved(): Boolean = billing.adsRemoved
+
+        /** Prezzo gia' formattato (es. "2,99 EUR") oppure stringa vuota se l'acquisto non e' disponibile. */
+        @JavascriptInterface
+        fun removeAdsPrice(): String = billing.price
+
+        @JavascriptInterface
+        fun buyRemoveAds() { runOnUiThread { billing.buy() } }
+
+        @JavascriptInterface
+        fun restorePurchases() { runOnUiThread { billing.refreshPurchases() } }
+
         /** True se l'utente nello Spazio Economico Europeo deve poter riaprire le scelte sul consenso. */
         @JavascriptInterface
         fun privacyOptionsRequired(): Boolean =
@@ -296,9 +345,15 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onPause() { super.onPause(); webView.onPause(); banner?.pause() }
-    override fun onResume() { super.onResume(); webView.onResume(); banner?.resume() }
+    override fun onResume() {
+        super.onResume()
+        webView.onResume()
+        banner?.resume()
+        billing.refreshPurchases() // cattura acquisti fatti mentre l'app era in background o su un altro telefono
+    }
     override fun onDestroy() {
         main.removeCallbacksAndMessages(null)
+        billing.end()
         banner?.destroy()
         webView.destroy()
         super.onDestroy()

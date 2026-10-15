@@ -95,6 +95,7 @@ dependencies {
     implementation("androidx.webkit:webkit:1.14.0")
     implementation("com.google.android.gms:play-services-ads:25.5.0")
     implementation("com.google.android.ump:user-messaging-platform:4.0.0")
+    implementation("com.android.billingclient:billing:9.1.0")
 }
 
 // Avviso se si compila la versione di produzione con gli ID di test.

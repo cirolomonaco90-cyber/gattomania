@@ -76,6 +76,7 @@ body {
 .menu { width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 16px; padding: 12px 0 8px; }
 .menu .btn { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; text-align: left; }
 .menu .btn .sub { font-size: 13px; opacity: .92; display: block; font-weight: 700; }
+.menu .btn.center { justify-content: center; }
 .badge { background: #fff; color: #cc4b00; border-radius: 999px; font-size: 13px; padding: 3px 9px; text-shadow: none; animation: pulse 1.1s ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.14); } }
 .bottomrow { display: flex; gap: 12px; justify-content: center; padding-top: 6px; }
