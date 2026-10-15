@@ -5,7 +5,8 @@ Gioco di logica per Android: un mostriciattolo per riga, colonna e zona colorata
 ## Cosa è stato verificato e cosa no
 
 - **Verificato**: tutti i 300 livelli e tutti gli 800 "mostri del giorno" pre-generati hanno una sola soluzione (controllo automatico con `tools/verify-puzzles.js`, che gira anche a ogni build su GitHub); il generatore è deterministico, quindi lo stesso giorno dà lo stesso puzzle su ogni telefono. Inoltre l'intero gioco è stato provato in un browser Chromium che simula un telefono: tocchi, errori, aiuti, vittoria, condivisione, mostro del giorno, video di prova.
-- **Non verificato**: la parte Android (Kotlin, AdMob, consenso) non è stata compilata né provata su un telefono, perché da dove ho lavorato non si può scaricare l'Android SDK. Il primo build su GitHub potrebbe segnalare qualche errore da correggere: è normale, basta incollarmi il messaggio.
+- **Compilato su GitHub**: la parte Android (Kotlin, AdMob, consenso GDPR) compila correttamente, sia in versione di prova (APK) sia in versione di produzione minificata (AAB, senza firma).
+- **Non ancora provato su un telefono vero**: nessuno ha ancora aperto l'APK su un dispositivo. Installalo e dimmi se vedi qualcosa che non va (annunci di test, vibrazione, condivisione, tasto indietro): è il primo collaudo da fare.
 
 ## Passo 1 – Compilare su GitHub (nessuna installazione sul tuo PC)
 
