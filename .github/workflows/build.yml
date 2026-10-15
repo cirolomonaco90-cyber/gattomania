@@ -20,12 +20,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
+      - name: Prepara Android SDK (gia' presente sul computer di GitHub)
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ -x "$SDKM" ]; then
+            yes | "$SDKM" --licenses > /dev/null 2>&1 || true
+            "$SDKM" "platforms;android-36" "build-tools;36.0.0" || true
+          else
+            echo "::warning::sdkmanager non trovato in $ANDROID_HOME: provo comunque, Gradle scarica da solo quello che serve."
+          fi
 
       - uses: gradle/actions/setup-gradle@v4
 
@@ -37,7 +46,14 @@ jobs:
       - run: node tools/verify-puzzles.js
 
       - name: APK di prova (si installa sul telefono per provare il gioco)
-        run: ./gradlew --no-daemon assembleDebug
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew --no-daemon assembleDebug 2>&1 | tee build-debug.log || {
+            msg=$( { grep -E "^e: |error:|What went wrong|Could not|Execution failed|FAILURE" -A4 build-debug.log | head -50; echo ---; tail -n 25 build-debug.log; } | head -c 3800 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')
+            echo "::error title=Build fallito::$msg"
+            exit 1
+          }
 
       - name: Prepara la chiave di firma (se presente)
         env:
@@ -53,13 +69,19 @@ jobs:
 
       - name: Pacchetto per Google Play (AAB firmato)
         if: env.SIGNED == 'true'
+        shell: bash
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           if [ -z "$ADMOB_APP_ID" ]; then echo "::warning::Nessun ID AdMob impostato: il pacchetto usa annunci di TEST e non genera guadagni."; fi
-          ./gradlew --no-daemon bundleRelease
+          set -o pipefail
+          ./gradlew --no-daemon bundleRelease 2>&1 | tee build-release.log || {
+            msg=$( { grep -E "^e: |error:|What went wrong|Could not|Execution failed|FAILURE" -A4 build-release.log | head -50; echo ---; tail -n 25 build-release.log; } | head -c 3800 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')
+            echo "::error title=Build release fallito::$msg"
+            exit 1
+          }
 
       - uses: actions/upload-artifact@v4
         with:
