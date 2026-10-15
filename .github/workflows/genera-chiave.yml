@@ -1,0 +1,43 @@
+name: Genera chiave di firma (una volta sola)
+
+# Crea la chiave con cui firmi l'app per Google Play. Va eseguita UNA volta sola.
+# Poi scarichi il file, lo conservi in un posto sicuro (se lo perdi non puoi piu'
+# aggiornare l'app senza passare dall'assistenza Google) e crei i segreti indicati.
+on:
+  workflow_dispatch:
+
+jobs:
+  keygen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Crea la chiave
+        run: |
+          PASS="$(openssl rand -hex 12)"
+          keytool -genkeypair -v -keystore upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass "$PASS" -keypass "$PASS" \
+            -dname "CN=Mostrilli, OU=App, O=Mostrilli, L=Napoli, ST=NA, C=IT"
+          {
+            echo "Crea questi 4 segreti in GitHub (Settings > Secrets and variables > Actions > New repository secret):"
+            echo
+            echo "KEYSTORE_PASSWORD = $PASS"
+            echo "KEY_PASSWORD      = $PASS"
+            echo "KEY_ALIAS         = upload"
+            echo "KEYSTORE_BASE64   = (incolla l'intero contenuto del file keystore-base64.txt)"
+            echo
+            echo "Conserva anche upload.jks e queste password in un posto sicuro (password manager)."
+          } > LEGGIMI-segreti.txt
+          base64 -w0 upload.jks > keystore-base64.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chiave-di-firma-RISERVATO
+          path: |
+            upload.jks
+            keystore-base64.txt
+            LEGGIMI-segreti.txt
+          retention-days: 3

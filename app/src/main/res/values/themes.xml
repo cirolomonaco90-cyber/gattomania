@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand_purple">#6C3FD1</color>
+    <color name="ic_background">#7B4DFF</color>
+
+    <style name="Theme.Mostrilli" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/brand_purple</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+</resources>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icona: Fiammì, il mostrillo di fuoco (disegno originale). Zona sicura: cerchio centrale di 66dp. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- ciuffo di fiamma -->
+    <path
+        android:fillColor="#FFC93C"
+        android:strokeColor="#2B2140"
+        android:strokeWidth="2.4"
+        android:strokeLineJoin="round"
+        android:pathData="M54,20 C59,27 66,30 62.5,39 C59,35.5 56.5,36.5 54,40 C51.5,36.5 49,35.5 45.5,39 C42,30 49,27 54,20 Z" />
+    <!-- corpo -->
+    <path
+        android:fillColor="#FF6B4A"
+        android:strokeColor="#2B2140"
+        android:strokeWidth="2.4"
+        android:pathData="M25,62 a29,26 0 1,0 58,0 a29,26 0 1,0 -58,0 Z" />
+    <!-- pancia -->
+    <path
+        android:fillColor="#FFD9A8"
+        android:pathData="M39,73 a15,9 0 1,0 30,0 a15,9 0 1,0 -30,0 Z" />
+    <!-- occhi -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#2B2140"
+        android:strokeWidth="2"
+        android:pathData="M40,59 a5.2,6 0 1,0 10.4,0 a5.2,6 0 1,0 -10.4,0 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#2B2140"
+        android:strokeWidth="2"
+        android:pathData="M57.6,59 a5.2,6 0 1,0 10.4,0 a5.2,6 0 1,0 -10.4,0 Z" />
+    <path
+        android:fillColor="#2B2140"
+        android:pathData="M42.6,60 a2.6,2.6 0 1,0 5.2,0 a2.6,2.6 0 1,0 -5.2,0 Z" />
+    <path
+        android:fillColor="#2B2140"
+        android:pathData="M60.2,60 a2.6,2.6 0 1,0 5.2,0 a2.6,2.6 0 1,0 -5.2,0 Z" />
+    <!-- sorriso -->
+    <path
+        android:strokeColor="#2B2140"
+        android:strokeWidth="2.4"
+        android:strokeLineCap="round"
+        android:pathData="M48,70 Q54,76 60,70" />
+</vector>
