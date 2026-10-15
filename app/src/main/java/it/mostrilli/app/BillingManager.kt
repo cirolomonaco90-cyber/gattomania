@@ -132,10 +132,10 @@ class BillingManager(
             }
         }
         when {
-            owned -> setAdsRemoved(true)
+            owned -> updateAdsRemoved(true)
             pending -> onMessage("pending")
             // La lista degli acquisti e' completa: se non c'e' piu' (rimborso) si ripristinano gli annunci.
-            authoritative -> setAdsRemoved(false)
+            authoritative -> updateAdsRemoved(false)
         }
     }
 
@@ -144,7 +144,7 @@ class BillingManager(
         client.acknowledgePurchase(params) { /* se fallisce, ci riproviamo al prossimo avvio */ }
     }
 
-    private fun setAdsRemoved(value: Boolean) {
+    private fun updateAdsRemoved(value: Boolean) {
         val changed = adsRemoved != value
         adsRemoved = value
         if (changed) onAdsRemovedChanged(value)
