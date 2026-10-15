@@ -67,8 +67,7 @@ jobs:
             echo "::warning::Manca il segreto KEYSTORE_BASE64: salto il pacchetto firmato per Google Play. Vedi LEGGIMI.md (passo 'Chiave di firma')."
           fi
 
-      - name: Pacchetto per Google Play (AAB firmato)
-        if: env.SIGNED == 'true'
+      - name: Pacchetto di release (firmato se c'e' la chiave, altrimenti solo per controllo)
         shell: bash
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
