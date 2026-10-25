@@ -105,4 +105,5 @@ jobs:
 
       - name: Avviso segreti Apple mancanti
         if: env.ASC_KEY_ID == '' || env.APPLE_TEAM_ID == ''
-        run: echo "::warning::Mancano i segreti Apple (ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8, APPLE_TEAM_ID): ho solo controllato che il codice compili. Vedi LEGGIMI.md, parte iPhone."
+        run: |
+          echo "::warning::Mancano i segreti Apple (ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8, APPLE_TEAM_ID): ho solo controllato che il codice compili. Vedi LEGGIMI.md, parte iPhone."
