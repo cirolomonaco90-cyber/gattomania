@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mostrilli</title>
+<meta name="description" content="Mostrilli: un mostriciattolo per riga, colonna e zona. Il puzzle di logica più carino!">
+<meta property="og:title" content="Mostrilli – il puzzle dei mostriciattoli">
+<meta property="og:description" content="Un mostrillo per riga, colonna e zona, senza che si tocchino. Riesci a battere il mio tempo?">
+<style>
+  :root { --bg1: #7b4dff; --bg2: #b24dff; --bg3: #ff6fa8; --ink: #2b2140; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px 16px;
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #fff;
+         background: linear-gradient(160deg, var(--bg1), var(--bg2) 55%, var(--bg3)); text-align: center; }
+  h1 { font-size: clamp(44px, 12vw, 72px); margin: 0 0 8px; letter-spacing: 1px; text-shadow: 0 5px 0 #3b1d94; }
+  p { font-size: 19px; max-width: 460px; margin: 0 auto 26px; line-height: 1.45; }
+  .btns { display: flex; flex-direction: column; gap: 14px; align-items: center; }
+  a.store { display: inline-block; min-width: 260px; padding: 15px 22px; border-radius: 18px; background: #fff; color: var(--ink);
+            font-weight: 800; font-size: 18px; text-decoration: none; box-shadow: 0 6px 0 rgba(43, 33, 64, .3); }
+  a.store.off { opacity: .6; pointer-events: none; }
+  small { display: block; margin-top: 28px; opacity: .85; }
+  small a { color: #fff; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Mostrilli</h1>
+  <p id="lead">Un mostriciattolo per riga, colonna e zona colorata, senza che si tocchino. Gratis su Android e iPhone!</p>
+  <div class="btns">
+    <a class="store" id="play" href="https://play.google.com/store/apps/details?id=it.mostrilli.app">▶ Google Play</a>
+    <a class="store" id="ios" href="#">App Store</a>
+  </div>
+  <small><a href="privacy.html">Privacy</a></small>
+</main>
+<script>
+  // Quando l'app sara' sull'App Store, incolla qui il suo link (es. https://apps.apple.com/app/id1234567890).
+  var APP_STORE_URL = '';
+
+  var ios = document.getElementById('ios');
+  var en = !/^it/i.test(navigator.language || '');
+  if (en) {
+    document.documentElement.lang = 'en';
+    document.getElementById('lead').textContent = 'One little monster per row, column and colored zone, and no two can touch. Free on Android and iPhone!';
+  }
+  if (APP_STORE_URL) ios.href = APP_STORE_URL;
+  else { ios.classList.add('off'); ios.textContent = en ? 'App Store – coming soon' : 'App Store – in arrivo'; }
+
+  // Porta direttamente allo store giusto chi apre il link dal telefono.
+  var ua = navigator.userAgent || '';
+  if (/android/i.test(ua)) location.replace(document.getElementById('play').href);
+  else if (/iphone|ipad|ipod/i.test(ua) && APP_STORE_URL) location.replace(APP_STORE_URL);
+</script>
+</body>
+</html>

@@ -10,7 +10,8 @@
   var PLAY_URL = 'https://play.google.com/store/apps/details?id=it.mostrilli.app';
   var PRIVACY_URL = 'https://cirolomonaco90-cyber.github.io/gattomania/privacy.html';
   var VERSION = '1.0';
-  var Native = window.Android || null; // ponte verso l'app Android (AdMob, vibrazione, condivisione)
+  var Native = window.Android || null; // ponte verso l'app nativa (Android, o l'adattatore iOS che imita la stessa interfaccia)
+  var STORE_URL = window.STORE_URL || PLAY_URL; // l'app iOS imposta il proprio link da condividere
   var DAILY_EPOCH = E.dayNumber(new Date(2026, 9, 1));
 
   function $(s, el) { return (el || document).querySelector(s); }
@@ -499,7 +500,7 @@
     for (var i = 1; i <= 3; i++) s += i <= stars ? '⭐' : '▫️';
     var head = G.mode === 'daily' ? t('shareDaily', { n: G.id - DAILY_EPOCH + 1 }) : t('shareLevel', { n: G.id });
     var grid = G.regions.map(function (row) { return row.map(function (g) { return C.LIST[G.map[g]].sq; }).join(''); }).join('\n');
-    var text = head + '\n' + t('shareLine', { t: fmt(G.elapsed), s: s }) + '\n\n' + grid + '\n\n' + t('shareCta') + '\n' + PLAY_URL;
+    var text = head + '\n' + t('shareLine', { t: fmt(G.elapsed), s: s }) + '\n\n' + grid + '\n\n' + t('shareCta') + '\n' + STORE_URL;
     if (Native && Native.share) { try { Native.share(text); return; } catch (e) { /* prova il resto */ } }
     if (navigator.share) { navigator.share({ text: text }).catch(function () {}); return; }
     try { navigator.clipboard.writeText(text); toast(t('copied')); } catch (e) { toast(text); }

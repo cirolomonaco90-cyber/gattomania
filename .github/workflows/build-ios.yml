@@ -1,0 +1,108 @@
+name: Compila Mostrilli iOS
+
+# Gira su un computer Mac di GitHub: non serve avere un Mac.
+# - Sempre: compila l'app per il simulatore (controlla che il codice sia corretto).
+# - Se ci sono i segreti Apple (vedi LEGGIMI.md, parte iPhone): firma l'app e la carica su TestFlight.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - 'app/src/main/assets/**'
+      - '.github/workflows/build-ios.yml'
+  workflow_dispatch:
+
+jobs:
+  ios:
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      ADMOB_IOS_APP_ID: ${{ secrets.ADMOB_IOS_APP_ID }}
+      ADMOB_IOS_BANNER_ID: ${{ secrets.ADMOB_IOS_BANNER_ID }}
+      ADMOB_IOS_INTERSTITIAL_ID: ${{ secrets.ADMOB_IOS_INTERSTITIAL_ID }}
+      ADMOB_IOS_REWARDED_ID: ${{ secrets.ADMOB_IOS_REWARDED_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Versione di Xcode
+        run: xcodebuild -version
+
+      - name: Collaudo del motore dei livelli
+        run: |
+          node tools/test-engine.js
+          node tools/verify-puzzles.js
+
+      - name: Genera il progetto Xcode
+        run: |
+          brew install xcodegen
+          cd ios && xcodegen generate
+
+      - name: Compila per il simulatore (controllo del codice)
+        shell: bash
+        run: |
+          set -o pipefail
+          cd ios
+          xcodebuild -project Mostrilli.xcodeproj -scheme Mostrilli -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build 2>&1 | tee ../build-ios.log || {
+            msg=$( { grep -E "error:|\*\* BUILD FAILED|Could not resolve|fatal" ../build-ios.log | sort -u | head -40; echo ---; tail -n 20 ../build-ios.log; } | head -c 3800 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')
+            echo "::error title=Build iOS fallito::$msg"
+            exit 1
+          }
+
+      - name: Archivia, firma e carica su TestFlight (solo se ci sono i segreti Apple)
+        if: env.ASC_KEY_ID != '' && env.ASC_ISSUER_ID != '' && env.ASC_KEY_P8 != '' && env.APPLE_TEAM_ID != ''
+        shell: bash
+        run: |
+          set -o pipefail
+          KEY="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
+          printf '%s\n' "$ASC_KEY_P8" > "$KEY"
+          if ! grep -q "BEGIN PRIVATE KEY" "$KEY"; then echo "$ASC_KEY_P8" | base64 --decode > "$KEY"; fi
+          AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+
+          ADS=()
+          if [ -n "$ADMOB_IOS_APP_ID" ]; then
+            ADS=(ADMOB_APP_ID="$ADMOB_IOS_APP_ID" ADMOB_BANNER_ID="$ADMOB_IOS_BANNER_ID" ADMOB_INTERSTITIAL_ID="$ADMOB_IOS_INTERSTITIAL_ID" ADMOB_REWARDED_ID="$ADMOB_IOS_REWARDED_ID")
+          else
+            echo "::warning::Nessun ID AdMob iOS impostato: l'app usa annunci di TEST e non genera guadagni."
+          fi
+
+          fail() {
+            msg=$( { grep -E "error:|\*\* (ARCHIVE|EXPORT) FAILED|No profiles|No signing|requires a provisioning|Error Domain" "$1" | sort -u | head -40; echo ---; tail -n 20 "$1"; } | head -c 3800 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')
+            echo "::error title=$2::$msg"
+            exit 1
+          }
+
+          cd ios
+          # Archivio senza firma: la firma per l'App Store la fa l'esportazione, con certificato gestito da Apple.
+          xcodebuild -project Mostrilli.xcodeproj -scheme Mostrilli -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Mostrilli.xcarchive" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            CODE_SIGNING_ALLOWED=NO "${ADS[@]}" archive 2>&1 | tee ../archive.log || fail ../archive.log "Archivio iOS fallito"
+
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+            <key>uploadSymbols</key><true/>
+          </dict></plist>
+          EOF
+
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Mostrilli.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" \
+            "${AUTH[@]}" 2>&1 | tee ../export.log || fail ../export.log "Caricamento su TestFlight fallito"
+          echo "::notice title=Caricata su TestFlight::Build ${{ github.run_number }} inviata ad App Store Connect. Tra 10-30 minuti compare in TestFlight."
+          rm -f "$KEY"
+
+      - name: Avviso segreti Apple mancanti
+        if: env.ASC_KEY_ID == '' || env.APPLE_TEAM_ID == ''
+        run: echo "::warning::Mancano i segreti Apple (ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8, APPLE_TEAM_ID): ho solo controllato che il codice compili. Vedi LEGGIMI.md, parte iPhone."

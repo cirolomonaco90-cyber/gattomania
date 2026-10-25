@@ -1,0 +1,65 @@
+# Progetto Xcode descritto in testo: il file .xcodeproj viene generato da XcodeGen
+# (sul computer Mac di GitHub, vedi .github/workflows/build-ios.yml).
+# Il gioco (HTML/CSS/JS) e' lo stesso dell'app Android: viene preso da app/src/main/assets.
+name: Mostrilli
+options:
+  bundleIdPrefix: it.mostrilli
+  deploymentTarget:
+    iOS: "16.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+
+packages:
+  GoogleMobileAds:
+    # Contiene anche Google User Messaging Platform (consenso GDPR).
+    url: https://github.com/googleads/swift-package-manager-google-mobile-ads.git
+    exactVersion: 13.11.0
+  GoogleUserMessagingPlatform:
+    url: https://github.com/googleads/swift-package-manager-google-user-messaging-platform.git
+    exactVersion: 3.1.0
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+targets:
+  Mostrilli:
+    type: application
+    platform: iOS
+    sources:
+      - path: Mostrilli
+      - path: ../app/src/main/assets
+        name: assets
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - package: GoogleMobileAds
+      - package: GoogleUserMessagingPlatform
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: it.mostrilli.app
+        PRODUCT_NAME: Mostrilli
+        INFOPLIST_FILE: Mostrilli/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_STYLE: Automatic
+        OTHER_LDFLAGS: ["$(inherited)", "-ObjC"]
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        # ID AdMob: di TEST finche' non vengono sostituiti dal workflow con i segreti ADMOB_IOS_*.
+        ADMOB_APP_ID: ca-app-pub-3940256099942544~1458002511
+        ADMOB_BANNER_ID: ca-app-pub-3940256099942544/2435281174
+        ADMOB_INTERSTITIAL_ID: ca-app-pub-3940256099942544/4411468910
+        ADMOB_REWARDED_ID: ca-app-pub-3940256099942544/1712485313
+
+schemes:
+  Mostrilli:
+    build:
+      targets:
+        Mostrilli: all
+    run:
+      config: Debug
+    archive:
+      config: Release
