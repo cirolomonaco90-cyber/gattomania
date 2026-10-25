@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Genera le immagini per la scheda Google Play (icona, grafica di presentazione, screenshot)
+"""Genera le immagini per Google Play e App Store (icona, grafica di presentazione, screenshot)
 usando il gioco vero. Uso: python3 tools/make-store-assets.py
 Richiede: pip install playwright && playwright install chromium"""
 import json
@@ -41,11 +41,12 @@ def init_script(day_offset_streak=5, level=13):
     })();""" % json.dumps(state)
 
 
-def shots(p, locale, folder):
+def shots(p, locale, folder, size=(360, 640)):
+    """size e' in punti CSS: x3 = pixel finali (360x640 -> 1080x1920 Play; 430x932 -> 1290x2796 App Store)."""
     out = OUT / folder
     out.mkdir(exist_ok=True)
     b = p.chromium.launch(args=['--allow-file-access-from-files'])
-    ctx = b.new_context(viewport={'width': 360, 'height': 640}, device_scale_factor=3, has_touch=True, locale=locale)
+    ctx = b.new_context(viewport={'width': size[0], 'height': size[1]}, device_scale_factor=3, has_touch=True, locale=locale)
     ctx.add_init_script(init_script())
     pg = ctx.new_page()
     errors = []
@@ -101,6 +102,8 @@ def main():
         b.close()
         icon_file.unlink(); feat_file.unlink()
         errs = shots(p, 'it-IT', 'screenshot-it') + shots(p, 'en-US', 'screenshot-en')
+        # iPhone 6,9" (App Store Connect)
+        errs += shots(p, 'it-IT', 'iphone-it', (430, 932)) + shots(p, 'en-US', 'iphone-en', (430, 932))
     print('Errori JS:', errs or 'nessuno')
     for f in sorted(os.listdir(OUT)):
         print(' ', f)
